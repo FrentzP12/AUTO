@@ -1,0 +1,28 @@
+name: Automate Python Script
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Ejecuta diariamente a medianoche UTC.
+  workflow_dispatch: # Permite ejecutar el workflow manualmente desde GitHub.
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install requests pyunpack psycopg2-binary
+
+      - name: Run script
+        env:
+          DSN: ${{ secrets.DSN }}
+        run: python your_script.py
