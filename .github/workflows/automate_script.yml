@@ -25,4 +25,4 @@ jobs:
       - name: Run script
         env:
           DSN: ${{ secrets.DSN }}
-        run: python your_script.py
+        run: python importacion.py
