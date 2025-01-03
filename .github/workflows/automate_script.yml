@@ -2,39 +2,38 @@ name: Automate Python Script
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Ejecuta diariamente a medianoche UTC.
-  workflow_dispatch: # Permite ejecución manual.
+    - cron: '0 0 * * *'
+  workflow_dispatch:
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
 
     steps:
-      # Paso 1: Clonar el repositorio
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Paso 2: Configurar Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      # Paso 3: Instalar dependencias
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
 
-      # Paso 4: Ejecutar el script
-      - name: Run script
+      - name: Run script and save log
         id: run-script
         run: |
           python importacion.py > output.log
-          cat output.log
-        env:
-          DSN: ${{ secrets.DSN }}
 
-      # Paso 5: Enviar correo con el resumen
+      - name: Read log file
+        id: read-log
+        run: |
+          echo "LOG_OUTPUT<<EOF" >> $GITHUB_ENV
+          cat output.log >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
       - name: Send Email Notification
         uses: dawidd6/action-send-mail@v3
         with:
@@ -48,14 +47,13 @@ jobs:
 
             Aquí está el resumen de la ejecución del workflow:
 
-            ${{ steps.run-script.outputs.terminal_output }}
+            ${{ env.LOG_OUTPUT }}
 
             Gracias,
             GitHub Actions
           to: frentz233@gmail.com
           from: GitHub Actions Bot <${{ secrets.EMAIL_USER }}>
 
-      # Paso 6 (Opcional): Subir el archivo de salida como artefacto
       - name: Upload execution log
         uses: actions/upload-artifact@v3
         with:
