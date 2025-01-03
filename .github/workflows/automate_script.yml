@@ -52,7 +52,7 @@ jobs:
 
             Gracias,
             GitHub Actions
-          to: tu_email@ejemplo.com
+          to: frentz233@gmail.com
           from: GitHub Actions Bot <${{ secrets.EMAIL_USER }}>
 
       # Paso 6 (Opcional): Subir el archivo de salida como artefacto
