@@ -33,10 +33,14 @@ def download_and_extract(download_url, download_dir, extract_dir):
 def insert_data_batch(cursor, query, data, table_name):
     if data:
         try:
+            cursor.execute("SAVEPOINT before_insert")
             execute_values(cursor, query, data)
-            print(f"{len(data)} registros insertados en {table_name}.")
+            inserted_count = cursor.rowcount
+            print(f"{inserted_count} registros nuevos insertados en {table_name}.")
+            cursor.execute("RELEASE SAVEPOINT before_insert")
         except Exception as e:
             print(f"Error al insertar en {table_name}: {e}")
+            cursor.execute("ROLLBACK TO SAVEPOINT before_insert")
 
 
 def process_json_and_insert_to_db(json_dir, dsn):
