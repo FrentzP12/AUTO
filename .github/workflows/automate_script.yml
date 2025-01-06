@@ -41,18 +41,14 @@ jobs:
           server_port: 587
           username: ${{ secrets.EMAIL_USER }}
           password: ${{ secrets.EMAIL_PASS }}
-          subject: "GitHub Actions Workflow: Resumen de Ejecución"
+          subject: "Actualización de Base de Datos: Resumen de Ejecución Diaria"
           body: |
-            Hola,
-
-            Aquí está el resumen de la ejecución del workflow:
+            La base de datos ha sido actualizada, se presenta el resumen a continuación:
 
             ${{ env.LOG_OUTPUT }}
 
-            Gracias,
-            GitHub Actions
           to: frentz233@gmail.com
-          from: GitHub Actions Bot <${{ secrets.EMAIL_USER }}>
+          from: SE@CE Bot <${{ secrets.EMAIL_USER }}>
 
       - name: Upload execution log
         uses: actions/upload-artifact@v3
