@@ -222,7 +222,7 @@ def process_json_and_insert_to_db(json_dir, dsn):
 
 
 if __name__ == "__main__":
-    DOWNLOAD_URL = 'https://contratacionesabiertas.osce.gob.pe/api/v1/file/seace_v3/json/2025/01/'
+    DOWNLOAD_URL = 'https://contratacionesabiertas.osce.gob.pe/api/v1/file/seace_v3/json/2024/12/'
     DOWNLOAD_DIR = 'ctc_dwn'
     EXTRACT_DIR = 'extracted_files'
     DSN = "postgresql://neondb_owner:VbdvNRPr2au7@ep-shrill-wind-a43e78up.us-east-1.aws.neon.tech/neondb?sslmode=require"
