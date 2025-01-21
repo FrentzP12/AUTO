@@ -30,6 +30,6 @@ jobs:
 
       - name: Send Email Notification using SendGrid API
         run: |
-          python scripts/send_mail.py
+          python send_mail.py
         env:
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
