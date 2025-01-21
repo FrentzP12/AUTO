@@ -130,7 +130,7 @@ def process_json_and_insert_to_db(json_dir, dsn):
             for item in tender.get('items', []):
                 items_data.append((
                     item.get('id'),
-                    tender.get('id'),
+                    tender.get('id'),   
                     item.get('description'),
                     item.get('status'),
                     item.get('classification', {}).get('id'),
