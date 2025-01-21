@@ -30,6 +30,6 @@ if __name__ == "__main__":
     LOG_FILE = "output.log"
     SUBJECT = "Actualización de Base de Datos: Resumen de Ejecución Diaria"
     TO_EMAIL = "frentz233@gmail.com"
-    FROM_EMAIL = "notificaciones@trial-3yxj6lj8w1xgdo2r.mlsender.net"  # Usa tu correo verificado en SendGrid
+    FROM_EMAIL = "MS_djXGTO@trial-3yxj6lj8w1xgdo2r.mlsender.net"  # Usa tu correo verificado en SendGrid
 
     send_email(LOG_FILE, SUBJECT, TO_EMAIL, FROM_EMAIL)
