@@ -21,15 +21,37 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install sendgrid  # Instalar la librería de SendGrid
 
       - name: Run script and save log
         id: run-script
         run: |
           python importacion.py > output.log
 
-      - name: Send Email Notification using SendGrid API
+      - name: Read log file
+        id: read-log
         run: |
-          python send_mail.py
-        env:
-          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          echo "LOG_OUTPUT<<EOF" >> $GITHUB_ENV
+          cat output.log >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Send Email Notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USER }}
+          password: ${{ secrets.EMAIL_PASS }}
+          subject: "Actualización de Base de Datos: Resumen de Ejecución Diaria"
+          body: |
+            La base de datos ha sido actualizada, se presenta el resumen a continuación:
+
+            ${{ env.LOG_OUTPUT }}
+
+          to: frentz233@gmail.com
+          from: SE@CE Bot <${{ secrets.EMAIL_USER }}>
+
+      - name: Upload execution log
+        uses: actions/upload-artifact@v3
+        with:
+          name: execution-summary
+          path: output.log
