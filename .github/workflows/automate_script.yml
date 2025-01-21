@@ -1,57 +1,35 @@
-  name: Automate Python Script
+name: Automate Python Script
 
-  on:
-    schedule:
-      - cron: '0 0 * * *'
-    workflow_dispatch:
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
 
-  jobs:
-    run-script:
-      runs-on: ubuntu-latest
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
 
-      steps:
-        - name: Checkout code
-          uses: actions/checkout@v3
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-        - name: Set up Python
-          uses: actions/setup-python@v4
-          with:
-            python-version: '3.10'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
 
-        - name: Install dependencies
-          run: |
-            pip install -r requirements.txt
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install sendgrid  # Instalar la librería de SendGrid
 
-        - name: Run script and save log
-          id: run-script
-          run: |
-            python importacion.py > output.log
+      - name: Run script and save log
+        id: run-script
+        run: |
+          python importacion.py > output.log
 
-        - name: Read log file
-          id: read-log
-          run: |
-            echo "LOG_OUTPUT<<EOF" >> $GITHUB_ENV
-            cat output.log >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
-
-        - name: Send Email Notification
-          uses: dawidd6/action-send-mail@v3
-          with:
-            server_address: smtp.mailersend.net
-            server_port: 587
-            username: ${{ secrets.EMAIL_USER }}
-            password: ${{ secrets.EMAIL_PASS }}
-            subject: "Actualización de Base de Datos: Resumen de Ejecución Diaria"
-            body: |
-              La base de datos ha sido actualizada, se presenta el resumen a continuación:
-
-              ${{ env.LOG_OUTPUT }}
-
-            to: frentz233@gmail.com
-            from: SE@CE Bot <${{ secrets.EMAIL_USER }}>
-
-        - name: Upload execution log
-          uses: actions/upload-artifact@v3
-          with:
-            name: execution-summary
-            path: output.log
+      - name: Send Email Notification using SendGrid API
+        run: |
+          python scripts/send_email_with_api.py
+        env:
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
