@@ -221,10 +221,38 @@ def process_json_and_insert_to_db(json_dir, dsn):
         conn.close()
 
 
+# ... (funciones anteriores se mantienen igual)
+
 if __name__ == "__main__":
-    DOWNLOAD_URL = 'https://contratacionesabiertas.osce.gob.pe/api/v1/file/seace_v3/json/2025/01/'
-    DOWNLOAD_DIR = 'ctc_dwn'
-    EXTRACT_DIR = 'extracted_files'
+    import datetime
+    today = datetime.date.today()
+    current_year = today.year
+    current_month = today.month
+    months_to_process = []
+
+    # Determinar si se procesa el mes anterior
+    if today.day <= 10:
+        first_day_current = today.replace(day=1)
+        last_day_previous = first_day_current - datetime.timedelta(days=1)
+        previous_year = last_day_previous.year
+        previous_month = last_day_previous.month
+        months_to_process.append((previous_year, previous_month))
+    
+    # Siempre procesar el mes actual
+    months_to_process.append((current_year, current_month))
+
+    # Eliminar duplicados (por si el día 1 cae en el cálculo)
+    unique_months = list(set(months_to_process))
+    unique_months.sort()  # Ordenar cronológicamente
+
     DSN = "postgresql://neondb_owner:VbdvNRPr2au7@ep-shrill-wind-a43e78up.us-east-1.aws.neon.tech/neondb?sslmode=require"
-    download_and_extract(DOWNLOAD_URL, DOWNLOAD_DIR, EXTRACT_DIR)
-    process_json_and_insert_to_db(EXTRACT_DIR, DSN)
+    
+    for year, month in unique_months:
+        formatted_month = f"{month:02d}"
+        download_url = f'https://contratacionesabiertas.osce.gob.pe/api/v1/file/seace_v3/json/{year}/{formatted_month}'
+        download_dir = os.path.join('ctc_dwn', f"{year}_{formatted_month}")
+        extract_dir = os.path.join('extracted_files', f"{year}_{formatted_month}")
+        
+        print(f"\nProcesando: {year}-{formatted_month}")
+        download_and_extract(download_url, download_dir, extract_dir)
+        process_json_and_insert_to_db(extract_dir, DSN)
