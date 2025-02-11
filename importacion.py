@@ -245,7 +245,6 @@ if __name__ == "__main__":
     unique_months = list(set(months_to_process))
     unique_months.sort()  # Ordenar cronológicamente
 
-    #DSN = "postgresql://neondb_owner:VbdvNRPr2au7@ep-shrill-wind-a43e78up.us-east-1.aws.neon.tech/neondb?sslmode=require"
     DSN = os.getenv("DSN")
     if not DSN:
         raise ValueError("Error: No se encontró la variable de entorno DSN")
