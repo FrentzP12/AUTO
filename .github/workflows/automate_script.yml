@@ -51,7 +51,7 @@ jobs:
           from: SE@CE Bot <${{ secrets.EMAIL_USER }}>
 
       - name: Upload execution log
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: execution-summary
           path: output.log
