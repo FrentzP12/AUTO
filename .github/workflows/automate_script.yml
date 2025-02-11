@@ -2,7 +2,7 @@ name: Automate Python Script
 
 on:
   schedule:
-    - cron: '0 23 * * *'
+    - cron: '0 22 * * *'
   workflow_dispatch:
 
 jobs:
@@ -25,6 +25,7 @@ jobs:
       - name: Run script and save log
         id: run-script
         run: |
+          export DATABASE_DSN=${{ secrets.DSN }}
           python importacion.py > output.log
 
       - name: Read log file
