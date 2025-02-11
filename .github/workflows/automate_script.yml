@@ -24,8 +24,9 @@ jobs:
 
       - name: Run script and save log
         id: run-script
+        env:
+          DSN: ${{ secrets.DSN }}
         run: |
-          export DATABASE_DSN=${{ secrets.DSN }}
           python importacion.py > output.log
 
       - name: Read log file
