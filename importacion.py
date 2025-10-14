@@ -82,7 +82,9 @@ def process_json_and_insert_to_db(json_dir):
         'port': 5432,         # puerto por defecto de PostgreSQL
         'database': 'LICIGOB',
         'user': 'postgres',   # cambia por tu usuario
-        'password': '040502'  # cambia por tu contraseña
+        'password': '040502',  # cambia por tu contraseña
+        'client_encoding': 'utf8',  # Especificar encoding para evitar problemas
+        'connect_timeout': 10  # Timeout de conexión
     }
 
     # Inicializar variables para evitar UnboundLocalError
@@ -90,9 +92,12 @@ def process_json_and_insert_to_db(json_dir):
     cursor = None
 
     try:
+        print("🔗 Conectando a la base de datos PostgreSQL...")
         # Conectar a la base de datos LICIGOB
         conn = psycopg2.connect(**db_config)
+        conn.set_client_encoding('UTF8')  # Asegurar encoding UTF-8
         cursor = conn.cursor()
+        print("✅ Conexión exitosa a la base de datos LICIGOB")
 
         compiled_releases_data = []
         parties_data = []
@@ -242,18 +247,51 @@ def process_json_and_insert_to_db(json_dir):
         """, planning_data, "planning")
 
         conn.commit()
-        print("Sincronización completada exitosamente.")
+        print("✅ Sincronización completada exitosamente.")
 
-    except Exception as e:
-        print(f"Error durante la sincronización: {e}")
+    except psycopg2.OperationalError as e:
+        print(f"❌ Error de conexión a PostgreSQL: {e}")
         if conn:
-            conn.rollback()
+            try:
+                conn.rollback()
+            except:
+                pass
+    except psycopg2.Error as e:
+        print(f"❌ Error de PostgreSQL: {e}")
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
+    except UnicodeDecodeError as e:
+        print(f"❌ Error de encoding: {e}")
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
+    except Exception as e:
+        print(f"❌ Error general durante la sincronización: {e}")
+        print(f"Tipo de error: {type(e).__name__}")
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
 
     finally:
         if cursor:
-            cursor.close()
+            try:
+                cursor.close()
+                print("🔒 Cursor cerrado")
+            except:
+                pass
         if conn:
-            conn.close()
+            try:
+                conn.close()
+                print("🔒 Conexión cerrada")
+            except:
+                pass
 
 
 # ... (funciones anteriores se mantienen igual)
