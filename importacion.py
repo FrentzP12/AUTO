@@ -43,7 +43,7 @@ def insert_data_batch(cursor, query, data, table_name):
             cursor.execute("ROLLBACK TO SAVEPOINT before_insert")
 
 
-def process_json_and_insert_to_db(json_dir, dsn):
+def process_json_and_insert_to_db(json_dir):
     json_files = [f for f in os.listdir(json_dir) if f.endswith('.json')]
     if not json_files:
         print("No se encontró ningún archivo JSON en el directorio extraído.")
@@ -52,14 +52,46 @@ def process_json_and_insert_to_db(json_dir, dsn):
     input_file = os.path.join(json_dir, json_files[0])
     print(f"Procesando archivo JSON: {input_file}")
 
-    with open(input_file, encoding='utf-8') as file:
-        data = json.load(file)
+    # Leer el archivo JSON con manejo de encoding ANTES de conectar a la BD
+    try:
+        with open(input_file, encoding='utf-8') as file:
+            data = json.load(file)
+    except UnicodeDecodeError:
+        print("Error con UTF-8, intentando con latin-1...")
+        try:
+            with open(input_file, encoding='latin-1') as file:
+                data = json.load(file)
+        except UnicodeDecodeError:
+            print("Error con latin-1, intentando con cp1252...")
+            try:
+                with open(input_file, encoding='cp1252') as file:
+                    data = json.load(file)
+            except UnicodeDecodeError:
+                print("❌ Error: No se pudo leer el archivo JSON con ningún encoding")
+                return
+    except Exception as e:
+        print(f"❌ Error al leer el archivo JSON: {e}")
+        return
 
     records = data.get('records', [])
     print(f"Se encontraron {len(records)} registros para procesar.")
 
+    # Configuración de conexión a la base de datos LICIGOB
+    db_config = {
+        'host': 'localhost',  # o la IP de tu servidor PostgreSQL
+        'port': 5432,         # puerto por defecto de PostgreSQL
+        'database': 'LICIGOB',
+        'user': 'postgres',   # cambia por tu usuario
+        'password': '040502'  # cambia por tu contraseña
+    }
+
+    # Inicializar variables para evitar UnboundLocalError
+    conn = None
+    cursor = None
+
     try:
-        conn = psycopg2.connect(dsn)
+        # Conectar a la base de datos LICIGOB
+        conn = psycopg2.connect(**db_config)
         cursor = conn.cursor()
 
         compiled_releases_data = []
@@ -214,11 +246,14 @@ def process_json_and_insert_to_db(json_dir, dsn):
 
     except Exception as e:
         print(f"Error durante la sincronización: {e}")
-        conn.rollback()
+        if conn:
+            conn.rollback()
 
     finally:
-        cursor.close()
-        conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 
 # ... (funciones anteriores se mantienen igual)
@@ -244,17 +279,13 @@ if __name__ == "__main__":
     # Eliminar duplicados (por si el día 1 cae en el cálculo)
     unique_months = list(set(months_to_process))
     unique_months.sort()  # Ordenar cronológicamente
-
-    DSN = os.getenv("DSN")
-    if not DSN:
-        raise ValueError("Error: No se encontró la variable de entorno DSN")
     
     for year, month in unique_months:
         formatted_month = f"{month:02d}"
-        download_url = f'https://contratacionesabiertas.osce.gob.pe/api/v1/file/seace_v3/json/{year}/{formatted_month}'
+        download_url = f'https://contratacionesabiertas.oece.gob.pe/api/v1/file/seace_v3/json/{year}/{formatted_month}'
         download_dir = os.path.join('ctc_dwn', f"{year}_{formatted_month}")
         extract_dir = os.path.join('extracted_files', f"{year}_{formatted_month}")
         
         print(f"\nProcesando: {year}-{formatted_month}")
         download_and_extract(download_url, download_dir, extract_dir)
-        process_json_and_insert_to_db(extract_dir, DSN)
+        process_json_and_insert_to_db(extract_dir)
