@@ -2,8 +2,7 @@ import os
 import requests
 from pyunpack import Archive
 import json
-import psycopg2
-from psycopg2.extras import execute_values
+import pyodbc  # Cambiado de psycopg2 a pyodbc para SQL Server
 
 def download_and_extract(download_url, download_dir, extract_dir):
     os.makedirs(download_dir, exist_ok=True)
@@ -33,14 +32,21 @@ def download_and_extract(download_url, download_dir, extract_dir):
 def insert_data_batch(cursor, query, data, table_name):
     if data:
         try:
-            cursor.execute("SAVEPOINT before_insert")
-            execute_values(cursor, query, data)
-            inserted_count = cursor.rowcount
-            print(f"{inserted_count} registros nuevos insertados en {table_name}.")
-            cursor.execute("RELEASE SAVEPOINT before_insert")
+            # SQL Server no tiene SAVEPOINT de la misma manera que PostgreSQL
+            # Usaremos BEGIN TRANSACTION en su lugar
+            cursor.execute("BEGIN TRANSACTION")
+            
+            # SQL Server no tiene execute_values, tenemos que hacer inserciones una por una
+            count = 0
+            for row in data:
+                cursor.execute(query, row)
+                count += 1
+                
+            print(f"{count} registros nuevos insertados en {table_name}.")
+            cursor.execute("COMMIT TRANSACTION")
         except Exception as e:
             print(f"Error al insertar en {table_name}: {e}")
-            cursor.execute("ROLLBACK TO SAVEPOINT before_insert")
+            cursor.execute("ROLLBACK TRANSACTION")
 
 
 def process_json_and_insert_to_db(json_dir):
@@ -76,26 +82,24 @@ def process_json_and_insert_to_db(json_dir):
     records = data.get('records', [])
     print(f"Se encontraron {len(records)} registros para procesar.")
 
-    # Configuración de conexión a la base de datos LICIGOB
-    db_config = {
-        'host': 'localhost',  # o la IP de tu servidor PostgreSQL
-        'port': 5432,         # puerto por defecto de PostgreSQL
-        'database': 'LICIGOB',
-        'user': 'postgres',   # cambia por tu usuario
-        'password': '040502',  # cambia por tu contraseña
-        'client_encoding': 'utf8',  # Especificar encoding para evitar problemas
-        'connect_timeout': 10  # Timeout de conexión
-    }
+    # Configuración de conexión a la base de datos SQL Server
+    conn_str = (
+        'DRIVER={ODBC Driver 17 for SQL Server};'  # Asegúrate de tener este driver instalado
+        'SERVER=localhost;'  # o la IP de tu servidor SQL Server
+        'DATABASE=LICIGOB;'
+        'UID=sa;'   # cambia por tu usuario de SQL Server
+        'PWD=040502;'  # cambia por tu contraseña
+        'Trusted_Connection=yes;'  # Para autenticación de Windows (opcional)
+    )
 
     # Inicializar variables para evitar UnboundLocalError
     conn = None
     cursor = None
 
     try:
-        print("🔗 Conectando a la base de datos PostgreSQL...")
+        print("🔗 Conectando a la base de datos SQL Server...")
         # Conectar a la base de datos LICIGOB
-        conn = psycopg2.connect(**db_config)
-        conn.set_client_encoding('UTF8')  # Asegurar encoding UTF-8
+        conn = pyodbc.connect(conn_str)
         cursor = conn.cursor()
         print("✅ Conexión exitosa a la base de datos LICIGOB")
 
@@ -208,56 +212,56 @@ def process_json_and_insert_to_db(json_dir):
         # Inserciones en lotes
         insert_data_batch(cursor, """
             INSERT INTO compiled_releases (id, ocid, date, published_date, initiation_type)
-            VALUES %s ON CONFLICT (id) DO NOTHING;
+            VALUES (?, ?, ?, ?, ?);
         """, compiled_releases_data, "compiled_releases")
 
         insert_data_batch(cursor, """
             INSERT INTO parties (id, name, identifier_scheme, identifier_id, legal_name, street_address, locality, region, department, country_name, roles, date_published)
-            VALUES %s ON CONFLICT (id) DO NOTHING;
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """, parties_data, "parties")
 
         insert_data_batch(cursor, """
             INSERT INTO buyers (id, name)
-            VALUES %s ON CONFLICT (id) DO NOTHING;
+            VALUES (?, ?);
         """, buyers_data, "buyers")
 
         insert_data_batch(cursor, """
             INSERT INTO tenders (id, compiled_release_id, buyer_id, title, description, procurement_method, procurement_method_details, main_procurement_category, number_of_tenderers, currency, value_amount, date_published)
-            VALUES %s ON CONFLICT (id) DO NOTHING;
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """, tenders_data, "tenders")
 
         insert_data_batch(cursor, """
             INSERT INTO items (id, tender_id, description, status, classification_id, classification_description, quantity, unit_id, unit_name, total_value_amount)
-            VALUES %s ON CONFLICT (id) DO NOTHING;
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """, items_data, "items")
 
         insert_data_batch(cursor, """
             INSERT INTO documents (id, tender_id, url, date_published, format, document_type, title, language)
-            VALUES %s ON CONFLICT (id) DO NOTHING;
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?);
         """, documents_data, "documents")
 
         insert_data_batch(cursor, """
             INSERT INTO tenderers (id, tender_id, name)
-            VALUES %s ON CONFLICT (id, tender_id) DO NOTHING;
+            VALUES (?, ?, ?);
         """, tenderers_data, "tenderers")
 
         insert_data_batch(cursor, """
             INSERT INTO planning (compiled_release_id, budget_description)
-            VALUES %s ON CONFLICT (compiled_release_id) DO NOTHING;
+            VALUES (?, ?);
         """, planning_data, "planning")
 
         conn.commit()
         print("✅ Sincronización completada exitosamente.")
 
-    except psycopg2.OperationalError as e:
-        print(f"❌ Error de conexión a PostgreSQL: {e}")
+    except pyodbc.OperationalError as e:
+        print(f"❌ Error de conexión a SQL Server: {e}")
         if conn:
             try:
                 conn.rollback()
             except:
                 pass
-    except psycopg2.Error as e:
-        print(f"❌ Error de PostgreSQL: {e}")
+    except pyodbc.Error as e:
+        print(f"❌ Error de SQL Server: {e}")
         if conn:
             try:
                 conn.rollback()
